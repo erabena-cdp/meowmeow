@@ -16,6 +16,7 @@ const hibubu = useMessage()
         <RouterLink to="/about">About</RouterLink>
         <RouterLink to="/meow">Meow</RouterLink>
         <RouterLink to="/hehe">Hehe</RouterLink>
+        <RouterLink to="/databasetest">Database Test</RouterLink>
       </nav>
     </div>
   </header>

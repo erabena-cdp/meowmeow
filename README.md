@@ -3,6 +3,7 @@
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
+
 ghadsajd
 [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
@@ -52,4 +53,5 @@ npm run test:unit
 ```sh
 npm run lint
 ```
-"# meowmeow" 
+
+"# meowmeow"
