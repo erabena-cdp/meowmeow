@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container">
+  <div class="page-container">
     <div class="container">
       <!-- Header -->
       <div class="header">
@@ -71,16 +71,26 @@
         </div>
         
         <div class="list-actions">
-          <button @click="fetchUsers" class="btn btn-secondary">
-            <span class="btn-icon">🔄</span>
-            Refresh List
-          </button>
-          <span v-if="users.length > 0" class="user-count">
-            Total: {{ users.length }} user{{ users.length !== 1 ? 's' : '' }}
-          </span>
+          <div class="search-section">
+            <input
+              type="text"
+              v-model="searchQuery"
+              placeholder="Search by first, middle, or last name..."
+              class="search-input"
+            />
+          </div>
+          <div class="action-buttons">
+            <button @click="fetchUsers" class="btn btn-secondary">
+              <span class="btn-icon">🔄</span>
+              Refresh List
+            </button>
+            <span v-if="filteredUsers.length > 0" class="user-count">
+              Showing {{ filteredUsers.length }} of {{ users.length }} user{{ users.length !== 1 ? 's' : '' }}
+            </span>
+          </div>
         </div>
         
-        <div v-if="users.length > 0" class="table-container">
+        <div v-if="filteredUsers.length > 0" class="table-container" :class="{ 'scrollable': filteredUsers.length > 7 }">
           <table class="user-table">
             <thead>
               <tr>
@@ -92,7 +102,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in users" :key="user.id" class="user-row">
+              <tr v-for="user in filteredUsers" :key="user.id" class="user-row">
                 <td class="user-id">{{ user.id }}</td>
                 <td>{{ user.fName }}</td>
                 <td>{{ user.mName || '—' }}</td>
@@ -111,7 +121,10 @@
           <div class="empty-icon">👥</div>
           <p>No users found. Create your first user above!</p>
         </div>
-        
+        <div v-else-if="usersLoaded && users.length > 0 && filteredUsers.length === 0" class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <p>No users match your search.</p>
+        </div>
         <div v-else-if="!usersLoaded" class="empty-state">
           <div class="empty-icon">🔍</div>
           <p>Click "Refresh List" to load users</p>
@@ -122,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 
 interface User {
   id: string
@@ -141,6 +154,19 @@ const message = ref('')
 const messageType = ref('success')
 const users = ref<User[]>([])
 const usersLoaded = ref(false)
+const searchQuery = ref('')
+
+const filteredUsers = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return users.value
+  }
+  const query = searchQuery.value.toLowerCase()
+  return users.value.filter(user =>
+    user.fName.toLowerCase().includes(query) ||
+    (user.mName && user.mName.toLowerCase().includes(query)) ||
+    user.lName.toLowerCase().includes(query)
+  )
+})
 
 async function submitForm() {
   try {
@@ -158,15 +184,12 @@ async function submitForm() {
     message.value = `✅ User created successfully with ID: ${data.id}`
     messageType.value = 'success'
     
-    // Reset form
     user.fName = ''
     user.mName = ''
     user.lName = ''
     
-    // Refresh the user list
     await fetchUsers()
     
-    // Clear message after 3 seconds
     setTimeout(() => {
       message.value = ''
     }, 3000)
@@ -220,7 +243,6 @@ async function deleteUser(userId: string) {
       message.value = `✅ User ${userId} deleted successfully`
       messageType.value = 'success'
       
-      // Refresh the list
       await fetchUsers()
       
       setTimeout(() => {
@@ -240,16 +262,10 @@ async function deleteUser(userId: string) {
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.app-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
+/* Remove .app-container background and padding */
+.page-container {
+  width: 100%;
+  /* no background, no padding – inherited from parent */
 }
 
 .container {
@@ -257,6 +273,7 @@ async function deleteUser(userId: string) {
   margin: 0 auto;
 }
 
+/* Header text colors adapt to parent theme */
 .header {
   text-align: center;
   margin-bottom: 2rem;
@@ -264,16 +281,18 @@ async function deleteUser(userId: string) {
 
 .header h1 {
   font-size: 2.5rem;
-  color: white;
   margin-bottom: 0.5rem;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  color: inherit; /* inherit from parent (light or dark) */
 }
 
 .subtitle {
-  color: rgba(255,255,255,0.9);
   font-size: 1rem;
+  color: inherit;
+  opacity: 0.9;
 }
 
+/* Card styles remain unchanged – they are white and work on both themes */
 .card {
   background: white;
   border-radius: 12px;
@@ -281,11 +300,6 @@ async function deleteUser(userId: string) {
   margin-bottom: 2rem;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(0,0,0,0.15);
 }
 
 .card-header {
@@ -400,16 +414,57 @@ async function deleteUser(userId: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.search-section {
+  flex: 1;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .user-count {
   font-size: 0.875rem;
   color: #718096;
+  white-space: nowrap;
 }
 
 .table-container {
   overflow-x: auto;
+}
+
+.table-container.scrollable {
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.table-container.scrollable .user-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f7fafc;
+  z-index: 1;
 }
 
 .user-table {
@@ -485,18 +540,33 @@ async function deleteUser(userId: string) {
 }
 
 @media (max-width: 768px) {
-  .app-container {
-    padding: 1rem;
+  .container {
+    padding: 0 1rem;
   }
-  
   .header h1 {
     font-size: 1.5rem;
   }
-  
   .user-table th,
   .user-table td {
     padding: 0.75rem;
     font-size: 0.75rem;
+  }
+  .search-section {
+    width: 100%;
+    margin-right: 0;
+  }
+  .search-input {
+    max-width: 100%;
+  }
+  .list-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .action-buttons {
+    justify-content: space-between;
+  }
+  .table-container.scrollable {
+    max-height: 350px;
   }
 }
 </style>
